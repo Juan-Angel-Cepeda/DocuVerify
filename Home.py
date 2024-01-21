@@ -43,7 +43,6 @@ if revisar:
         st.markdown("## RFC: {}".format(rfc))
         
         #unas pruebas
-        st.text(fn.check_op_est(img_op_est,rfc))
         
         if fn.check_op_sat(op_sat_data):
             st.success("SAT: Sin Adeudos y al corriente")
@@ -59,7 +58,8 @@ if revisar:
             st.success("IMSS: Sin Adeudos y al corriente")
         else:
             st.error("IMSS: Con Adeudos o no se encuentra al corriente")
-    
+
+        st.text(fn.check_op_est(img_op_est,rfc))
         st.success("Todo bien")
     
     except Exception as e:

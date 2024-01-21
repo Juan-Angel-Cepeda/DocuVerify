@@ -6,9 +6,15 @@ from datetime import datetime
 import locale
 from bs4 import BeautifulSoup
 from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.chrome.options import Options
+
+
 import pytesseract
 import re
-from selenium.webdriver.common.by import By
+
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
 def convert_pdf_to_image(documentos):
@@ -73,7 +79,7 @@ def proveedor_data(imss_data):
         nombre_razonsocial = nombre_razonsocial.split(":")[1]
         return rfc.strip(), nombre_razonsocial.strip()
     except Exception as e:
-        return e
+        raise ValueError("Error de funcion proveedor data: {e}".format(e=e))
         
 def check_op_sat(op_sat_data):
     driver = webdriver.Chrome()
@@ -89,13 +95,23 @@ def check_op_sat(op_sat_data):
         return False
 
 def check_op_est(imgs,rfc):
+    
+    respuesta = []
     texto = extract_text_from_image(imgs)
     folio = encontrar_folio_op_est(texto)
+    
+    print("\n \n"+folio+"\n \n")
     yr, second_field, third_field, fourth_field = separar_campos(folio)
     alfa, fecha, homo = separar_rfc(rfc)
-    return yr, second_field, third_field, fourth_field,alfa,fecha,homo
-    #consultar_folio_navegador(yr, second_field, third_field, fourth_field)
-  
+    html_content = consultar_folio_navegador(yr,second_field,third_field,fourth_field,alfa,fecha,homo)
+    soup = BeautifulSoup(html_content,"html.parser")
+    span_state = soup.find('span',class_='state')
+    contenido_br = [br.get_text(strip=True) for br in span_state.find_all('br')]
+    for text in contenido_br:
+        respuesta.append(text)
+    return respuesta
+    
+    
 def extract_text_from_image(imgs):
     try:
         text = []
@@ -109,77 +125,94 @@ def extract_text_from_image(imgs):
         text = " ".join(text)
         return text
     except Exception as e:
-        return e
+        raise ValueError("Error desde extraer texto dese la imagen {e}".format(e=e))
 
 def encontrar_folio_op_est(texto):
-    patron_folio = re.compile(r'Folio : (\d+-\d+-\d+-\d+)')
-    resultado = patron_folio.search(texto)
-    if resultado:
-        folio = resultado.group(1)
-        return folio
-    else:
-        return False
+    try:
+        patron_folio = re.compile(r'Folio : (\d+[~-]\d+[~-]\d+[~-]\d+)')
+        resultado = patron_folio.search(texto)
+        if resultado:
+            folio = resultado.group(1)
+            return folio
+        else:
+            return False
+    except Exception as e:
+        raise ValueError("Error desde econtrar folio en texto extraido {e}".format(e=e))
 
 def consultar_folio_navegador(yr, second_field, third_field, fourth_field,alfa,fecha,homo):
-    driver = webdriver.Chrome()
-    driver.maximize_window()
-    driver.get("https://ipagos.chihuahua.gob.mx/consultas/opobligfisc/")
+    options = Options()
+    options.add_argument("--start-maximized")
+    driver = webdriver.Chrome(options=options)
+    wait = WebDriverWait(driver,10)
+    ipagos = "https://ipagos.chihuahua.gob.mx/consultas/opobligfisc/"
     
-    #ingresa el año
-    driver.find_element(By.XPATH,'//*[@id="Forma"]/input[1]').clear()
-    driver.find_element(By.XPATH,'//*[@id="Forma"]/input[1]').send_keys(yr)
-    
-    #ingresa el segundo campo
-    driver.find_element(By.XPATH,'//*[@id="Forma"]/input[2]').clear()
-    driver.find_element(By.XPATH,'//*[@id="Forma"]/input[2]').send_keys(second_field)
-    
-    #ingresa el tercer campo
-    driver.find_element(By.XPATH,'//*[@id="Forma"]/input[3]').clear()
-    driver.find_element(By.XPATH,'//*[@id="Forma"]/input[3]').send_keys(third_field)
-    
-    #ingresa el cuarto campo
-    driver.find_element(By.XPATH,'//*[@id="Forma"]/input[4]').clear()
-    driver.find_element(By.XPATH,'//*[@id="Forma"]/input[4]').send_keys(fourth_field)
-    
-    #ingresa el apha
-    driver.find_element(By.XPATH,'//*[@id="Forma"]/input[5]').clear()
-    driver.find_element(By.XPATH,'//*[@id="Forma"]/input[5]').send_keys(alfa)
-    
-    #ingresa la fecha
-    driver.find_element(By.XPATH,'//*[@id="Forma"]/input[6]').clear()
-    driver.find_element(By.XPATH,'//*[@id="Forma"]/input[6]').send_keys(fecha)
-    
-    #ingresa la homoclave
-    driver.find_element(By.XPATH,'//*[@id="Forma"]/input[7]').clear()
-    driver.find_element(By.XPATH,'//*[@id="Forma"]/input[7]').send_keys(homo)
-    
-    #consultar
-    driver.find_element(By.XPATH,'//*[@id="botonForm"]').click()
-    driver.implicitly_wait(2)
-    html_content = driver.page_source
-    driver.quit()
-    soup = BeautifulSoup(html_content, "html.parser")
-    return soup
+    print(yr, second_field, third_field, fourth_field,alfa,fecha,homo)
+    try:
+        driver.get(ipagos)
+
+        #ingresa el año
+        driver.find_element(By.XPATH,'//*[@id="Forma"]/input[1]').clear()
+        driver.find_element(By.XPATH,'//*[@id="Forma"]/input[1]').send_keys(yr)
+
+        #ingresa el segundo campo
+        driver.find_element(By.XPATH,'//*[@id="Forma"]/input[2]').clear()
+        driver.find_element(By.XPATH,'//*[@id="Forma"]/input[2]').send_keys(second_field)
+
+        #ingresa el tercer campo
+        driver.find_element(By.XPATH,'//*[@id="Forma"]/input[3]').clear()
+        driver.find_element(By.XPATH,'//*[@id="Forma"]/input[3]').send_keys(third_field)
+
+        #ingresa el cuarto campo
+        driver.find_element(By.XPATH,'//*[@id="Forma"]/input[4]').clear()
+        driver.find_element(By.XPATH,'//*[@id="Forma"]/input[4]').send_keys(fourth_field)
+
+        #ingresa el apha
+        driver.find_element(By.XPATH,'//*[@id="Forma"]/input[5]').clear()
+        driver.find_element(By.XPATH,'//*[@id="Forma"]/input[5]').send_keys(alfa)
+
+        #ingresa la fecha
+        driver.find_element(By.XPATH,'//*[@id="Forma"]/input[6]').clear()
+        driver.find_element(By.XPATH,'//*[@id="Forma"]/input[6]').send_keys(fecha)
+
+        #ingresa la homoclave
+        driver.find_element(By.XPATH,'//*[@id="Forma"]/input[7]').clear()
+        driver.find_element(By.XPATH,'//*[@id="Forma"]/input[7]').send_keys(homo)
+
+        #consultar
+        driver.find_element(By.XPATH,'//*[@id="botonForm"]').click()
+        wait.until(EC.url_changes(ipagos))
+        wait.until(EC.presence_of_all_elements_located((By.XPATH,'//*[@id="botonForm"]/span/br[5]')))
+        html_content = driver.page_source
+        driver.quit()
+        return html_content
+    except Exception as e:
+        raise ValueError("Error desde interactuar con navegador, consultar folio navegador {e}".format(e=e))
+    finally:
+        driver.quit()
+
 
 def separar_campos(folio):
     try:
         yr = '2024'
+        folio = folio.replace("~","-")
         second_field = folio.split("-")[1]
         third_field = folio.split("-")[2]
         fourth_field = folio.split("-")[3]
         return yr, second_field, third_field, fourth_field
     except Exception as e:
-        return e
+        raise ValueError("Error desde separar campos del RFC op estatal {e}".format(e=e))
 
 def separar_rfc(rfc):
-    if len(rfc) == 12:
-        alfa = rfc[:3]
-        fecha = rfc[3:9]
-        homo = rfc[9:]
-    elif len(rfc == 13):
-        alfa = rfc[:4]
-        fecha = rfc[4:10]
-        homo = rfc[10:]
-    else:
-        raise ValueError('Longitud RFC incorrecta')
-    return alfa, fecha, homo
+    try:
+        if len(rfc) == 12:
+            alfa = rfc[:3]
+            fecha = rfc[3:9]
+            homo = rfc[9:]
+        elif len(rfc == 13):
+            alfa = rfc[:4]
+            fecha = rfc[4:10]
+            homo = rfc[10:]
+        return alfa, fecha, homo
+    except Exception as e:
+        raise ValueError('Error en separar RFC en alfa fecha y homo {e}'.format(e=e))
+    
