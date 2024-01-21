@@ -99,7 +99,7 @@ def check_op_est(imgs,rfc):
         texto = extract_text_from_image(imgs)
         folio = encontrar_folio_op_est(texto)
 
-        print("\n \n"+folio+"\n \n")
+        print("Aqui esta el folio: ", folio)
         yr, second_field, third_field, fourth_field = separar_campos(folio)
         alfa, fecha, homo = separar_rfc(rfc)
         html_content = consultar_folio_navegador(yr,second_field,third_field,fourth_field,alfa,fecha,homo)
@@ -126,14 +126,13 @@ def extract_text_from_image(imgs):
         raise ValueError("Error desde extraer texto dese la imagen {e}".format(e=e))
 
 def encontrar_folio_op_est(texto):
+    texto = limpiar_ocr(texto)
     try:
-        patron_folio = re.compile(r'Folio : (\d+[~-]\d+[~-]\d+[~-]\d+)')
+        patron_folio = re.compile(r'(FOLIO:2024-\d+-\d+-\d+)')
         resultado = patron_folio.search(texto)
         if resultado:
             folio = resultado.group(1)
             return folio
-        else:
-            return False
     except Exception as e:
         raise ValueError("Error desde econtrar folio en texto extraido {e}".format(e=e))
 
@@ -212,4 +211,9 @@ def separar_rfc(rfc):
         return alfa, fecha, homo
     except Exception as e:
         raise ValueError('Error en separar RFC en alfa fecha y homo {e}'.format(e=e))
-    
+
+def limpiar_ocr(texto):
+    texto = texto.replace("O","0").replace("~","-").upper()
+    texto = re.sub(r'[^a-zA-Z0-9-:]',"",texto)
+    print(texto)
+    return texto
