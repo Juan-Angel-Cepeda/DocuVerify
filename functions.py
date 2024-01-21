@@ -95,22 +95,20 @@ def check_op_sat(op_sat_data):
         return False
 
 def check_op_est(imgs,rfc):
-    
-    respuesta = []
-    texto = extract_text_from_image(imgs)
-    folio = encontrar_folio_op_est(texto)
-    
-    print("\n \n"+folio+"\n \n")
-    yr, second_field, third_field, fourth_field = separar_campos(folio)
-    alfa, fecha, homo = separar_rfc(rfc)
-    html_content = consultar_folio_navegador(yr,second_field,third_field,fourth_field,alfa,fecha,homo)
-    soup = BeautifulSoup(html_content,"html.parser")
-    span_state = soup.find('span',class_='state')
-    contenido_br = [br.get_text(strip=True) for br in span_state.find_all('br')]
-    for text in contenido_br:
-        respuesta.append(text)
-    return respuesta
-    
+    try:
+        texto = extract_text_from_image(imgs)
+        folio = encontrar_folio_op_est(texto)
+
+        print("\n \n"+folio+"\n \n")
+        yr, second_field, third_field, fourth_field = separar_campos(folio)
+        alfa, fecha, homo = separar_rfc(rfc)
+        html_content = consultar_folio_navegador(yr,second_field,third_field,fourth_field,alfa,fecha,homo)
+        #soup = BeautifulSoup(html_content,"html.parser")
+        #span_state = soup.find('span',class_='state')
+        #return span_state
+        return True
+    except:
+        return False
     
 def extract_text_from_image(imgs):
     try:
@@ -183,7 +181,6 @@ def consultar_folio_navegador(yr, second_field, third_field, fourth_field,alfa,f
         wait.until(EC.url_changes(ipagos))
         wait.until(EC.presence_of_all_elements_located((By.XPATH,'//*[@id="botonForm"]/span/br[5]')))
         html_content = driver.page_source
-        driver.quit()
         return html_content
     except Exception as e:
         raise ValueError("Error desde interactuar con navegador, consultar folio navegador {e}".format(e=e))

@@ -59,8 +59,10 @@ if revisar:
         else:
             st.error("IMSS: Con Adeudos o no se encuentra al corriente")
 
-        st.text(fn.check_op_est(img_op_est,rfc))
-        st.success("Todo bien")
+        if fn.check_op_est(img_op_est, rfc):
+            st.success("ESTATAL: Verificación exitosa")
+        else:
+            st.error("ESTATAL: Verificación fallida")
     
     except Exception as e:
         st.text(e)
