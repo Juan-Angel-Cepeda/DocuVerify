@@ -1,6 +1,7 @@
 import streamlit as st
 import functions as fn
 
+
 st.markdown("### Constancia de Siutacion Fiscal")
 csf = st.file_uploader("CSF", type="pdf")
 
@@ -31,8 +32,24 @@ if revisar:
         img_imss = doc_en_imag[2]
         img_op_est = doc_en_imag[3]
         
+        
         infonavit_data = fn.search_and_decode(img_infonavit)
-        st.text(infonavit_data)
+        imss_data = fn.search_and_decode(img_imss)
+        csf_data = fn.search_and_decode(img_csf)
+        #cambiar por data en CSF
+
+        st.text(csf_data)
+        
+        if fn.check_infonavit(infonavit_data):
+            st.success("INFONAVIT: Sin Adeudos y al corriente")
+        else:
+            st.error("INFONAVIT: Con Adeudos o no se encuentra al corriente")                
+        
+        if fn.check_imss(imss_data):
+            st.success("IMSS: Sin Adeudos y al corriente")
+        else:
+            st.error("IMSS: Con Adeudos o no se encuentra al corriente")
+    
         st.success("Todo bien")
     
     except Exception as e:
