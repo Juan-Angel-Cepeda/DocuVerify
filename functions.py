@@ -7,6 +7,7 @@ import locale
 from bs4 import BeautifulSoup
 from selenium import webdriver
 import pytesseract
+import re
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
 def convert_pdf_to_image(documentos):
@@ -84,13 +85,13 @@ def check_op_sat(op_sat_data):
     else:
         return False
 
-def check_op_est():
-    driver = webdriver.Chrome()
-    driver.maximize_window()
-    driver.get("https://ipagos.chihuahua.gob.mx/consultas/opobligfisc/")
-    driver.find_element('By.XCODE')
-    
-
+def check_op_est(imgs):
+    texto = extract_text_from_image(imgs)
+    folio = encontrar_folio_op_est(texto)
+    yr, second_field, third_field, fourth_field = separar_campos(folio)
+    return yr, second_field, third_field, fourth_field
+    #consultar_folio_navegador(yr, second_field, third_field, fourth_field)
+  
 def extract_text_from_image(imgs):
     try:
         text = []
@@ -101,6 +102,33 @@ def extract_text_from_image(imgs):
             single_text = pytesseract.image_to_string(th)
             text.append(single_text)
         print(text)
+        text = " ".join(text)
         return text
+    except Exception as e:
+        return e
+
+def encontrar_folio_op_est(texto):
+    patron_folio = re.compile(r'Folio : (\d+-\d+-\d+-\d+)')
+    resultado = patron_folio.search(texto)
+    if resultado:
+        folio = resultado.group(1)
+        return folio
+    else:
+        return False
+
+def consultar_folio_navegador(yr, second_field, third_field, fourth_field,alfa,fecha,homo):
+    driver = webdriver.Chrome()
+    driver.maximize_window()
+    driver.get("https://ipagos.chihuahua.gob.mx/consultas/opobligfisc/")
+    driver.find_element('By.XCODE')
+    pass
+
+def separar_campos(folio):
+    try:
+        yr = '2024'
+        second_field = folio.split("-")[1]
+        third_field = folio.split("-")[2]
+        fourth_field = folio.split("-")[3]
+        return yr, second_field, third_field, fourth_field
     except Exception as e:
         return e

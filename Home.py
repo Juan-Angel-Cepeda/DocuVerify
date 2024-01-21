@@ -37,8 +37,9 @@ if revisar:
         imss_data = fn.search_and_decode(img_imss)
         op_sat_data = fn.search_and_decode(img_op_sat)
         op_est_text = fn.extract_text_from_image(img_op_est)
+        datos_op_est = fn.encontrar_folio_op_est(op_est_text)
         
-        st.text(op_est_text)
+        st.text(datos_op_est)
         
         if fn.check_op_sat(op_sat_data):
             st.success("SAT: Sin Adeudos y al corriente")
