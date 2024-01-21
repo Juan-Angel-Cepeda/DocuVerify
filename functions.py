@@ -4,7 +4,8 @@ import pyzbar.pyzbar as pyzbar
 import numpy as np
 from datetime import datetime
 import locale
-import requests
+from bs4 import BeautifulSoup
+from selenium import webdriver
 
 def convert_pdf_to_image(documentos):
     docus_en_imagenes = []
@@ -71,5 +72,17 @@ def proveedor_data(imss_data):
     except Exception as e:
         return e
         
-        
+def check_op_sat(op_sat_data):
+    driver = webdriver.Chrome()
+    driver.get(op_sat_data)
+    html_content = driver.page_source
+    driver.quit()
+    soup = BeautifulSoup(html_content, "html.parser")
+    td_elemets = soup.find_all('td')
+    if "Positivo" in td_elemets[8].text:
+        return True
+    else:
+        return False
+    #for td_element in td_elemets:
+    #    print(td_element.text)
     
