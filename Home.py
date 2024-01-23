@@ -1,7 +1,6 @@
 import streamlit as st
 import functions as fn
 
-
 st.markdown("### Opinion SAT")
 op_sat = st.file_uploader("D-32", type="pdf")
 
@@ -66,5 +65,3 @@ if revisar:
     
     except Exception as e:
         st.text(e)
-        
-    
