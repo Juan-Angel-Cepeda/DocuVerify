@@ -1,5 +1,5 @@
 import pdf2image as p2i
-import cv2
+import opencv-python as cv2
 import pyzbar.pyzbar as pyzbar
 import numpy as np
 from datetime import datetime
