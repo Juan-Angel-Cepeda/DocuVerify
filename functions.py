@@ -10,12 +10,11 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
-
-
 import pytesseract
 import re
 
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+IPAGOS_URL = "https://ipagos.chihuahua.gob.mx/consultas/opobligfisc/"
 
 def convert_pdf_to_image(documentos):
     docus_en_imagenes = []
@@ -33,9 +32,12 @@ def convert_pdf_to_image(documentos):
 def search_and_decode(img_doc):
     qr_codes = []
     for img in img_doc:
-        img = img_to_numpy(img)
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        qr_codes = pyzbar.decode(gray)
+        try:
+            img = img_to_numpy(img)
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            qr_codes = pyzbar.decode(gray)
+        except:
+            continue
     
     if qr_codes:
         qr_data = qr_codes[0].data.decode("utf-8")
@@ -81,18 +83,27 @@ def proveedor_data(imss_data):
     except Exception as e:
         raise ValueError("Error de funcion proveedor data: {e}".format(e=e))
         
-def check_op_sat(op_sat_data):
-    driver = webdriver.Chrome()
-    driver.get(op_sat_data)
-    html_content = driver.page_source
-    driver.quit()
-    soup = BeautifulSoup(html_content, "html.parser")
-    td_elemets = soup.find_all('td')
-    #falta sacar la fecha de aqui paps
-    if "Positivo" in td_elemets[8].text:
-        return True
-    else:
-        return False
+def check_op_sat(url_de_consulta_op_sat):
+    try:
+        driver = webdriver.Chrome()
+        driver.get(url_de_consulta_op_sat)
+        wait = WebDriverWait(driver,5)
+
+        #vamos a buscar un elemento en especifico con XCode
+
+
+        html_content = driver.page_source
+        driver.quit()
+        soup = BeautifulSoup(html_content, "html.parser")
+        td_elemets = soup.find_all('td')
+        #falta sacar la fecha de aqui paps
+        if "Positivo" in td_elemets[8].text:
+            return True
+        else:
+            return False
+    except Exception as e:
+        driver.quit()
+        raise ValueError(e)
 
 def check_op_est(imgs,rfc):
     try:
@@ -141,11 +152,10 @@ def consultar_folio_navegador(yr, second_field, third_field, fourth_field,alfa,f
     options.add_argument("--start-maximized")
     driver = webdriver.Chrome(options=options)
     wait = WebDriverWait(driver,10)
-    ipagos = "https://ipagos.chihuahua.gob.mx/consultas/opobligfisc/"
     
     print(yr, second_field, third_field, fourth_field,alfa,fecha,homo)
     try:
-        driver.get(ipagos)
+        driver.get(IPAGOS_URL)
 
         #ingresa el año
         driver.find_element(By.XPATH,'//*[@id="Forma"]/input[1]').clear()
@@ -177,7 +187,7 @@ def consultar_folio_navegador(yr, second_field, third_field, fourth_field,alfa,f
 
         #consultar
         driver.find_element(By.XPATH,'//*[@id="botonForm"]').click()
-        wait.until(EC.url_changes(ipagos))
+        wait.until(EC.url_changes(IPAGOS_URL))
         wait.until(EC.presence_of_all_elements_located((By.XPATH,'//*[@id="botonForm"]/span/br[5]')))
         html_content = driver.page_source
         return html_content
@@ -185,7 +195,6 @@ def consultar_folio_navegador(yr, second_field, third_field, fourth_field,alfa,f
         raise ValueError("Error desde interactuar con navegador, consultar folio navegador {e}".format(e=e))
     finally:
         driver.quit()
-
 
 def separar_campos(folio):
     try:

@@ -17,37 +17,56 @@ op_est = st.file_uploader("Opinion Estatal", type="pdf")
 revisar = st.button("Revisar")
 
 if revisar:
+    
     try:
+        
         byte_op_sat = op_sat.getvalue()
         byte_infonavit = infonavit.getvalue()
         byte_imss = imss.getvalue()
         byte_op_est = op_est.getvalue()
         
         documentos = [byte_op_sat, byte_infonavit, byte_imss, byte_op_est]
-        doc_en_imag = fn.convert_pdf_to_image(documentos)
         
+        try:
+            doc_en_imag = fn.convert_pdf_to_image(documentos)
+        except:
+            st.text("Error al convertir pdfs en imágenes")
+            
         
         img_op_sat = doc_en_imag[0]
         img_infonavit = doc_en_imag[1]
         img_imss = doc_en_imag[2]
         img_op_est = doc_en_imag[3]
         
+        try:
+            infonavit_data = fn.search_and_decode(img_infonavit)
+        except:
+            st.error('Error en verifical el QR Infonavit')
         
-        infonavit_data = fn.search_and_decode(img_infonavit)
-        imss_data = fn.search_and_decode(img_imss)
-        op_sat_data = fn.search_and_decode(img_op_sat)
+        try:
+            imss_data = fn.search_and_decode(img_imss)
+        except:
+            st.error('Error en verificar el QR IMSS')
         
-        rfc, razon_social = fn.proveedor_data(imss_data)
+        try:
+            op_sat_data = fn.search_and_decode(img_op_sat)
+        except:
+            st.error('Error en verificar el QR SAT')
+            
+        try:
+            rfc, razon_social = fn.proveedor_data(imss_data)
+            st.markdown("## Razón Social o Nombre: {}".format(razon_social))
+            st.markdown("## RFC: {}".format(rfc))
+        except:
+            st.error('Error en extraer Información del proveedor desde IMSS')
         
-        st.markdown("## Razón Social o Nombre: {}".format(razon_social))
-        st.markdown("## RFC: {}".format(rfc))
-        
-        #unas pruebas
-        
-        if fn.check_op_sat(op_sat_data):
-            st.success("SAT: Sin Adeudos y al corriente")
-        else:
-            st.error("SAT: Con Adeudos o no se encuentra al corriente")
+        try:
+            if fn.check_op_sat(op_sat_data):
+                st.success("SAT: Sin Adeudos y al corriente")
+            else:
+                st.error("SAT: Con Adeudos o no se encuentra al corriente")
+        except:
+            st.error('Error en verificación Opinion SAT')
         
         if fn.check_infonavit(infonavit_data):
             st.success("INFONAVIT: Sin Adeudos y al corriente")
