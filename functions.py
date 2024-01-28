@@ -16,41 +16,39 @@ import re
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 IPAGOS_URL = "https://ipagos.chihuahua.gob.mx/consultas/opobligfisc/"
 
-def convert_pdf_to_image(documentos):
-    docus_en_imagenes = []
+def convertir_bytes_a_imagenes(documento_en_bytes):    
     try:
-        for documento in documentos:
-            file = documento
-            imagenes = p2i.convert_from_bytes(file)
-            docus_en_imagenes.append(imagenes)
-        
-        return docus_en_imagenes
-
+        imagenes = p2i.convert_from_bytes(documento_en_bytes)
+        return imagenes
     except Exception as e:
-        raise e
+        print(e)
+        raise ValueError("Error, no se logró convertir el documento a imagenes: {e}".format(e=e))
 
-def search_and_decode(img_doc):
-    qr_codes = []
-    for img in img_doc:
-        try:
-            img = img_to_numpy(img)
-            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            qr_codes = pyzbar.decode(gray)
-        except:
-            continue
-    
-    if qr_codes:
-        qr_data = qr_codes[0].data.decode("utf-8")
-        return qr_data
-    
-    else:
-        return "No se encontró código QR"
+def search_and_decode(imagenes):
+    try:
+        qr_codes = []
+        for imagen in imagenes:
+            try:
+                imagen = img_to_numpy(imagen)
+                gray = cv2.cvtColor(imagen, cv2.COLOR_BGR2GRAY)
+                qr_codes = pyzbar.decode(gray)
+            except:
+                continue
+            
+        if qr_codes:
+            datos_del_qr = qr_codes[0].data.decode("utf-8")
+            return datos_del_qr
+    except:
+        raise ValueError("Error, No se logró detectar QRs en el documento")
 
 def img_to_numpy(img):
-    img = np.array(img)
-    return img
+    try:
+        img = np.array(img)
+        return img
+    except Exception as e:
+        raise ValueError("Error, no se logró convertir la imagen a numpy: {e}".format(e=e))
 
-def check_infonavit(infonavit_data):
+def check_infonavit(infonavit_data,fecha_carga_prov):
     
     locale.setlocale(locale.LC_TIME, "es_ES.UTF-8")
     try:
@@ -65,38 +63,38 @@ def check_infonavit(infonavit_data):
             return False
     
     except Exception as e:
-        return False
+        raise ValueError("No se logro identificar la validez y la vigencia")
 
-def check_imss(imss_data):
-    if ("SIN OPINION" in imss_data) or ("POSITIVA" in imss_data):
+def check_imss(respuesta_qr_imss,fecha_carga_prov):
+    #falta verificar la opinion
+    if ("SIN OPINI" in respuesta_qr_imss) or ("POSITIVA" in respuesta_qr_imss):
         return True
     else:
-        return False
+        return False 
 
-def proveedor_data(imss_data):
+def proveedor_data(respuesta_qr_imss):
     try:
-        rfc = imss_data.split("|")[6]
-        nombre_razonsocial = imss_data.split("|")[7]
+        rfc = respuesta_qr_imss.split("|")[6]
+        nombre_razonsocial = respuesta_qr_imss.split("|")[7]
         rfc = rfc.split(":")[1]
         nombre_razonsocial = nombre_razonsocial.split(":")[1]
         return rfc.strip(), nombre_razonsocial.strip()
     except Exception as e:
-        raise ValueError("Error de funcion proveedor data: {e}".format(e=e))
+        raise ValueError("Error, no se logró identificar la información del proveedor desde IMSS: {e}".format(e=e))
         
-def check_op_sat(url_de_consulta_op_sat):
+def check_op_sat(url_de_consulta_op_sat,fecha_carga_prov):
+    
     try:
         driver = webdriver.Chrome()
         driver.get(url_de_consulta_op_sat)
-        wait = WebDriverWait(driver,5)
-
-        #vamos a buscar un elemento en especifico con XCode
-
-
+        #wait = WebDriverWait(driver,1)
+        #wait.until(EC.presence_of_element_located((By.XPATH,'//*[@id="ubicacionForm:j_idt13:1:j_idt15:j_idt18_data"]/tr[3]/td[2]')))
         html_content = driver.page_source
         driver.quit()
+        
         soup = BeautifulSoup(html_content, "html.parser")
         td_elemets = soup.find_all('td')
-        #falta sacar la fecha de aqui paps
+        #print(td_elemets.text)
         if "Positivo" in td_elemets[8].text:
             return True
         else:
@@ -222,7 +220,10 @@ def separar_rfc(rfc):
         raise ValueError('Error en separar RFC en alfa fecha y homo {e}'.format(e=e))
 
 def limpiar_ocr(texto):
-    texto = texto.replace("O","0").replace("~","-").upper()
-    texto = re.sub(r'[^a-zA-Z0-9-:]',"",texto)
-    print(texto)
-    return texto
+    try:
+        texto = texto.replace("O","0").replace("~","-").upper()
+        texto = re.sub(r'[^a-zA-Z0-9-:]',"",texto)
+        print(texto)
+        return texto
+    except:
+        raise ValueError("Errir al limpart texto de OCR de la Opinion Estatal")

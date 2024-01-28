@@ -1,89 +1,86 @@
 import streamlit as st
 import functions as fn
-
+import revisiones as rv
 
 st.markdown("### Opinion SAT")
-op_sat = st.file_uploader("D-32", type="pdf")
+opinion_sat_pdf = st.file_uploader("D-32", type="pdf")
 
 st.markdown("### Opinion Infonavit")
-infonavit = st.file_uploader("Infonavit", type="pdf")
+opinion_infonavit_pdf = st.file_uploader("Infonavit", type="pdf")
 
 st.markdown("### Opinion IMSS")
-imss = st.file_uploader("IMSS", type="pdf")
+opinion_imss_pdf = st.file_uploader("IMSS", type="pdf")
 
 st.markdown("### Opinion Estatal")
-op_est = st.file_uploader("Opinion Estatal", type="pdf")
+opinion_estatal_pdf = st.file_uploader("Opinion Estatal", type="pdf")
+fecha_de_carga_del_proveedor = st.date_input("Ingresa la fecha de carga del proveedor")
 
 revisar = st.button("Revisar")
 
 if revisar:
     
     try:
-        
-        byte_op_sat = op_sat.getvalue()
-        byte_infonavit = infonavit.getvalue()
-        byte_imss = imss.getvalue()
-        byte_op_est = op_est.getvalue()
-        
-        documentos = [byte_op_sat, byte_infonavit, byte_imss, byte_op_est]
-        
         try:
-            doc_en_imag = fn.convert_pdf_to_image(documentos)
-        except:
-            st.text("Error al convertir pdfs en imágenes")
-            
-        
-        img_op_sat = doc_en_imag[0]
-        img_infonavit = doc_en_imag[1]
-        img_imss = doc_en_imag[2]
-        img_op_est = doc_en_imag[3]
-        
-        try:
-            infonavit_data = fn.search_and_decode(img_infonavit)
-        except:
-            st.error('Error en verifical el QR Infonavit')
-        
-        try:
-            imss_data = fn.search_and_decode(img_imss)
-        except:
-            st.error('Error en verificar el QR IMSS')
-        
-        try:
-            op_sat_data = fn.search_and_decode(img_op_sat)
-        except:
-            st.error('Error en verificar el QR SAT')
-            
-        try:
-            rfc, razon_social = fn.proveedor_data(imss_data)
+            bytes_imss = opinion_imss_pdf.getvalue()
+            rfc, razon_social = rv.informacion_del_proveedor(rv.respuesta_qr_imss(bytes_imss))
             st.markdown("## Razón Social o Nombre: {}".format(razon_social))
             st.markdown("## RFC: {}".format(rfc))
-        except:
-            st.error('Error en extraer Información del proveedor desde IMSS')
+        except Exception as e:
+            st.error('Error en extraer Información: {e}'.format(e=e))
+
+        try:
+            bytes_infonavit = opinion_infonavit_pdf.getvalue()
+            informacion_qr_infonavit = rv.respuesta_qr_infonavit(bytes_infonavit)
+        except Exception as e:
+            st.error('Error {e}'.format(e=e))
         
         try:
-            if fn.check_op_sat(op_sat_data):
+            bytes_imss = opinion_imss_pdf.getvalue()
+            informacion_qr_imss = rv.respuesta_qr_imss(bytes_imss)
+        except Exception as e:
+            st.error('Error {e}'.format(e=e))
+        
+        try:
+            bytes_sat = opinion_sat_pdf.getvalue()
+            informacion_qr_sat = rv.respuesta_qr_sat(bytes_sat)
+        except Exception as e:
+            st.error('Error {e}'.format(e=e))    
+          
+        try:      
+            if fn.check_infonavit(informacion_qr_infonavit, fecha_de_carga_del_proveedor):
+                st.success("INFONAVIT: Sin Adeudos y al corriente")
+            else:
+                st.error("INFONAVIT: Con Adeudos o no se encuentra al corriente")                
+        except Exception as e:
+            st.error('Error en verificación Opinion Infonavit: {e}'.format(e=e))
+        
+        try:
+            if fn.check_imss(informacion_qr_imss,fecha_de_carga_del_proveedor):
+                st.success("IMSS: Sin Adeudos y al corriente")
+            else:
+                st.error("IMSS: Con Adeudos o no se encuentra al corriente")
+        except:
+            st.error('Error en verificación Opinion IMSS')
+            
+        
+        try:
+            if fn.check_op_sat(informacion_qr_sat,fecha_de_carga_del_proveedor):
                 st.success("SAT: Sin Adeudos y al corriente")
             else:
                 st.error("SAT: Con Adeudos o no se encuentra al corriente")
         except:
             st.error('Error en verificación Opinion SAT')
-        
-        if fn.check_infonavit(infonavit_data):
-            st.success("INFONAVIT: Sin Adeudos y al corriente")
-        else:
-            st.error("INFONAVIT: Con Adeudos o no se encuentra al corriente")                
-        
-        if fn.check_imss(imss_data):
-            st.success("IMSS: Sin Adeudos y al corriente")
-        else:
-            st.error("IMSS: Con Adeudos o no se encuentra al corriente")
 
-        if fn.check_op_est(img_op_est, rfc):
-            st.success("ESTATAL: Verificación exitosa")
-        else:
-            st.error("ESTATAL: Verificación fallida")
+        try:
+            bytes_estatal = opinion_estatal_pdf.getvalue()
+            imagenes_op_estatal = rv.imagenes_opinion_estatal(bytes_estatal)
+            if fn.check_op_est(imagenes_op_estatal, rfc):
+                st.success("ESTATAL: Verificación exitosa")
+            else:
+                st.error("ESTATAL: Verificación fallida")
+        except:
+            st.error('Error en verificación Opinion Estatal')
     
     except Exception as e:
         st.text(e)
         
-    
