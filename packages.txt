@@ -5,3 +5,4 @@ libglib2.0-0
 libzbar-dev
 libzbar0
 poppler-utils
+firefox-esr

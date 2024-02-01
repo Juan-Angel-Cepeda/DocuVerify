@@ -9,7 +9,9 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.firefox.options import Options
+from selenium.webdriver.firefox.service import Service
+from webdriver_manager.firefox import GeckoDriverManager
 import pytesseract
 import re
 
@@ -78,7 +80,16 @@ def proveedor_data(imss_data):
         raise ValueError("Error de funcion proveedor data: {e}".format(e=e))
         
 def check_op_sat(op_sat_data):
-    driver = webdriver.Chrome()
+    driver = webdriver.Firefox()
+    options = Options()
+    options.add_argument("--headless")
+    options.add_argument("--disable-gpu")
+    service = Service(GeckoDriverManager().install())
+    
+    driver = webdriver.Firefox(options=options,
+                              service=service)
+    
+    
     driver.get(op_sat_data)
     html_content = driver.page_source
     driver.quit()
@@ -99,9 +110,8 @@ def check_op_est(imgs,rfc):
         yr, second_field, third_field, fourth_field = separar_campos(folio)
         alfa, fecha, homo = separar_rfc(rfc)
         html_content = consultar_folio_navegador(yr,second_field,third_field,fourth_field,alfa,fecha,homo)
-        #soup = BeautifulSoup(html_content,"html.parser")
-        #span_state = soup.find('span',class_='state')
-        #return span_state
+        soup = BeautifulSoup(html_content,"html.parser")
+        span_state = soup.find('span',class_='state')
         return True
     except:
         return False
@@ -133,9 +143,17 @@ def encontrar_folio_op_est(texto):
         raise ValueError("Error desde econtrar folio en texto extraido {e}".format(e=e))
 
 def consultar_folio_navegador(yr, second_field, third_field, fourth_field,alfa,fecha,homo):
+    
+    driver = webdriver.Firefox()
     options = Options()
-    options.add_argument("--start-maximized")
-    driver = webdriver.Chrome(options=options)
+    options.add_argument("--headless")
+    options.add_argument("--disable-gpu")
+    service = Service(GeckoDriverManager().install())
+    
+    driver = webdriver.Firefox(options=options,
+                              service=service)
+    
+    
     wait = WebDriverWait(driver,10)
     ipagos = "https://ipagos.chihuahua.gob.mx/consultas/opobligfisc/"
     
