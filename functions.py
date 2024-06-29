@@ -227,3 +227,11 @@ def limpiar_ocr(texto):
         return texto
     except:
         raise ValueError("Errir al limpart texto de OCR de la Opinion Estatal")
+    
+def limpiar_ocr_acta(texto):
+    texto_limpio = texto.replace(".","").replace(":","").replace(";","").upper()
+    
+
+def compare_objeto_social(texto_obj_social,img_obj_social):
+    texto_obj_social = extract_text_from_image(img_obj_social)
+    
