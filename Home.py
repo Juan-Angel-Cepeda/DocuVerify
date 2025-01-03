@@ -47,7 +47,7 @@ if revisar:
             st.error('Error {e}'.format(e=e))    
           
         try:      
-            if fn.check_infonavit(informacion_qr_infonavit, fecha_de_carga_del_proveedor):
+            if fn.check_infonavit(informacion_qr_infonavit, rfc, fecha_de_carga_del_proveedor):
                 st.success("INFONAVIT: Sin Adeudos y al corriente")
             else:
                 st.error("INFONAVIT: Con Adeudos o no se encuentra al corriente")                

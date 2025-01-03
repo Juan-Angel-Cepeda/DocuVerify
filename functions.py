@@ -48,26 +48,10 @@ def img_to_numpy(img):
     except Exception as e:
         raise ValueError("Error, no se logró convertir la imagen a numpy: {e}".format(e=e))
 
-def check_infonavit(infonavit_data,fecha_carga_prov):
-    
-    locale.setlocale(locale.LC_TIME, "es_ES.UTF-8")
-    try:
-        process_line = infonavit_data.split("\n")[1]
-        date= process_line.split(":")[1]
-        emision = datetime.strptime(date, "%d/%B/%Y")
-        delta_time = (datetime.now() - emision).days
-    
-        if ("Sin adeudos" in infonavit_data) and (delta_time < 30):
-            return True, delta_time
-        else:
-            return False
-    
-    except Exception as e:
-        raise ValueError("No se logro identificar la validez y la vigencia")
 
 def check_imss(respuesta_qr_imss,fecha_carga_prov):
     #falta verificar la opinion
-    if ("SIN OPINI" in respuesta_qr_imss) or ("POSITIVA" in respuesta_qr_imss):
+    if ("SIN OPINION" in respuesta_qr_imss) or ("POSITIVA" in respuesta_qr_imss):
         return True
     else:
         return False 
@@ -112,12 +96,35 @@ def check_op_est(imgs,rfc):
         yr, second_field, third_field, fourth_field = separar_campos(folio)
         alfa, fecha, homo = separar_rfc(rfc)
         html_content = consultar_folio_navegador(yr,second_field,third_field,fourth_field,alfa,fecha,homo)
-        #soup = BeautifulSoup(html_content,"html.parser")
-        #span_state = soup.find('span',class_='state')
-        #return span_state
-        return True
+        soup = BeautifulSoup(html_content,"html.parser")
+        span_state = soup.find('span',class_='state')
+        return span_state
+    
     except:
         return False
+    
+def check_infonavit(infonavit_data,rfc,fecha_carga_prov):
+    
+    try:
+        
+        driver = webdriver.Chrome()
+        wait = WebDriverWait(driver,120)
+        
+        driver.get(infonavit_data)
+        wait.until(EC.presence_of_element_located((By.XPATH,'/html/body/div[5]/div[3]/div/div[2]/div[2]/div/section/div[1]/div/div/div')))
+        driver.find_element((By.XPATH,'//*[@id="ApoyoSolMainDiv"]/div/section/div[1]/div/div/div/div/div[1]/div[2]/div[3]/input')).clear()
+        driver.find_element((By.XPATH,'//*[@id="ApoyoSolMainDiv"]/div/section/div[1]/div/div/div/div/div[1]/div[2]/div[3]/input')).send_keys(rfc)
+        driver.find_element((By.XPATH,'/div/section/div[1]/div/div/div/div/div[2]/div[1]/button')).click()
+        wait.until(EC.presence_of_element_located((By.XPATH,'//*[@id="ApoyoSolMainDiv"]/div/section/div/div/div/div/div/div/div[1]/h5[5]/span/span')))
+        html_content = driver.page_source
+        
+        soup = BeautifulSoup(html_content,"html.parser")
+        span_state = soup.find('span',class_='gwt-InlineHTML')
+        return span_state
+        
+    except Exception as e:
+        raise ValueError("No se logro identificar la validez y la vigencia")
+
     
 def extract_text_from_image(imgs):
     try:
@@ -137,11 +144,18 @@ def extract_text_from_image(imgs):
 def encontrar_folio_op_est(texto):
     texto = limpiar_ocr(texto)
     try:
-        patron_folio = re.compile(r'(FOLIO:2024-\d+-\d+-\d+)')
+        patron_folio = re.compile(r'(FOLIO:\d+-\d+-\d+-\d+)')
         resultado = patron_folio.search(texto)
         if resultado:
             folio = resultado.group(1)
             return folio
+        else:
+            patron_folio = re.compile(r'(FOLIO:2025-\d+-\d+-\d+)')
+            resultado = patron_folio.search(texto)
+            if(not resultado):
+                raise ValueError("No se logró encontrar el folio en el texto extraido")
+            return resultado.group(1)
+            
     except Exception as e:
         raise ValueError("Error desde econtrar folio en texto extraido {e}".format(e=e))
 
@@ -196,7 +210,8 @@ def consultar_folio_navegador(yr, second_field, third_field, fourth_field,alfa,f
 
 def separar_campos(folio):
     try:
-        yr = '2024'
+        primer_semento = folio.split("-")[0]
+        yr = primer_semento.split(':')[1]
         folio = folio.replace("~","-")
         second_field = folio.split("-")[1]
         third_field = folio.split("-")[2]
@@ -227,11 +242,4 @@ def limpiar_ocr(texto):
         return texto
     except:
         raise ValueError("Errir al limpart texto de OCR de la Opinion Estatal")
-    
-def limpiar_ocr_acta(texto):
-    texto_limpio = texto.replace(".","").replace(":","").replace(";","").upper()
-    
-
-def compare_objeto_social(texto_obj_social,img_obj_social):
-    texto_obj_social = extract_text_from_image(img_obj_social)
     
